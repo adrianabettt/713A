@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador — Refinando e Apresentando</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ECEAE4;
+  --surface: #FFFFFF;
+  --surface2: #F2F0EA;
+  --border: #D8D5CD;
+  --border2: #B8B5AD;
+  --text1: #18170F;
+  --text2: #57554E;
+  --text3: #9E9B93;
+  --blue:        #1B5EA8; --blue-bg:   #EAF1FB; --blue-b: #A8C5ED;
+  --green:       #2A6B3C; --green-bg:  #E8F5EE; --green-b:#8FCDA7;
+  --amber:       #7A4B0A; --amber-bg:  #FDF2DC; --amber-b:#F0C878;
+  --red:         #9B2020; --red-bg:    #FDEAEA; --red-b:  #F0A8A8;
+  --purple:      #4A2A8A; --purple-bg: #EEE8FA; --purple-b:#B8A0E0;
+  --r: 8px; --rlg: 12px;
+  --font: 'DM Sans', system-ui, sans-serif;
+  --mono: 'DM Mono', 'Courier New', monospace;
+  --editor-bg: #1A1B26;
+  --editor-bg2: #13141E;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text1);
+  font-size: 14px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOP BAR */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.topbar-title { font-size: 15px; font-weight: 600; color: var(--text1); }
+.topbar-sub { font-size: 11px; color: var(--text2); }
+.badges { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 3px 9px; border-radius: 20px; border: 1px solid;
+}
+.b-blue   { background: var(--blue-bg);   color: var(--blue);   border-color: var(--blue-b); }
+.b-green  { background: var(--green-bg);  color: var(--green);  border-color: var(--green-b); }
+.b-amber  { background: var(--amber-bg);  color: var(--amber);  border-color: var(--amber-b); }
+.b-gray   { background: var(--surface2);  color: var(--text2);  border-color: var(--border); }
+.b-red    { background: var(--red-bg);    color: var(--red);    border-color: var(--red-b); }
+
+/* SPLIT LAYOUT */
+.split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 1px;
+  background: var(--border);
+}
+.pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+.pane-left  { width: 52%; }
+.pane-right { flex: 1; }
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 8px;
+}
+.pane-title { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; }
+
+.pane-scroll { flex: 1; overflow-y: auto; padding: 12px; }
+.pane-scroll::-webkit-scrollbar { width: 6px; }
+.pane-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* CARD */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rlg);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.card-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.lbl {
+  font-size: 10px; font-weight: 600; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--text3); margin: 10px 0 5px;
+}
+
+/* CODE EDITOR */
+.editor {
+  background: var(--editor-bg);
+  border-radius: var(--r);
+  padding: 12px 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 2;
+  overflow-x: auto;
+  border: 1px solid #2A2B3C;
+}
+.code-row {
+  display: flex;
+  align-items: baseline;
+  padding: 0 14px;
+  gap: 10px;
+  transition: background .15s;
+}
+.code-row:hover { background: rgba(255,255,255,.04); }
+.code-row.new-line { background: rgba(100,220,120,.07); }
+.ln { color: #3D3F58; font-size: 11px; min-width: 18px; user-select: none; flex-shrink: 0; }
+.code-txt { color: #CDD6F4; white-space: pre; }
+.kw  { color: #C792EA; }
+.fn  { color: #82AAFF; }
+.str { color: #C3E88D; }
+.num { color: #F78C6C; }
+.cm  { color: #444766; font-style: italic; }
+.hl-v { background: #1B4A80; padding: 0 3px; border-radius: 3px; }
+.hl-m { background: #5A4800; padding: 0 3px; border-radius: 3px; }
+.hl-l { background: #1B4A2A; padding: 0 3px; border-radius: 3px; }
+.ctag {
+  font-family: var(--font); font-size: 10px; font-weight: 600;
+  padding: 1px 5px; border-radius: 3px; margin-left: 6px; vertical-align: middle;
+}
+.ct-v { background: #1B5EA8; color: #C5DEFA; }
+.ct-m { background: #7A4B0A; color: #FDE8B0; }
+.ct-l { background: #2A6B3C; color: #BDE8CC; }
+
+/* REFINEMENT TOOLS */
+.tool-section { margin-bottom: 10px; }
+.tool-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+
+.btn {
+  cursor: pointer; border: 1px solid var(--border2); border-radius: var(--r);
+  background: var(--surface); color: var(--text1); font-size: 12px; font-weight: 500;
+  padding: 6px 12px; font-family: var(--font); transition: all .15s; line-height: 1;
+}
+.btn:hover { background: var(--surface2); }
+.btn:active { transform: scale(.97); }
+.btn-blue   { background: var(--blue-bg);   border-color: var(--blue-b);   color: var(--blue); }
+.btn-green  { background: var(--green-bg);  border-color: var(--green-b);  color: var(--green); }
+.btn-amber  { background: var(--amber-bg);  border-color: var(--amber-b);  color: var(--amber); }
+.btn-red    { background: var(--red-bg);    border-color: var(--red-b);    color: var(--red); }
+
+.tog {
+  cursor: pointer; padding: 5px 11px; border-radius: var(--r);
+  border: 1px solid var(--border); font-size: 12px; font-weight: 500;
+  font-family: var(--font); background: var(--surface2); color: var(--text2);
+  transition: all .15s;
+}
+.tog:hover { border-color: var(--border2); }
+.on-blue   { border-color: var(--blue-b);   background: var(--blue-bg);   color: var(--blue); }
+.on-green  { border-color: var(--green-b);  background: var(--green-bg);  color: var(--green); }
+.on-amber  { border-color: var(--amber-b);  background: var(--amber-bg);  color: var(--amber); }
+
+/* COLOR PALETTE */
+.pal { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.cor {
+  width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: transform .15s, border-color .15s;
+}
+.cor:hover { transform: scale(1.2); }
+.cor.sel { border-color: var(--text1); }
+
+/* FONT CONTROLS */
+.font-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.font-btn {
+  cursor: pointer; padding: 4px 10px; border-radius: var(--r);
+  border: 1px solid var(--border); background: var(--surface2);
+  font-family: var(--font); font-size: 13px; font-weight: 500; color: var(--text1);
+  transition: all .15s;
+}
+.font-btn:hover { background: var(--border); }
+.font-btn.sel { background: var(--blue-bg); border-color: var(--blue-b); color: var(--blue); }
+.font-size-ctrl { display: flex; align-items: center; gap: 6px; }
+.sz-btn {
+  width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface2); cursor: pointer; font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; color: var(--text1);
+  transition: all .15s;
+}
+.sz-btn:hover { background: var(--border); }
+.sz-val { font-size: 13px; font-weight: 600; min-width: 28px; text-align: center; }
+
+/* NOTAS */
+.notas-wrap { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.n-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 9px; border-radius: 20px; border: 1.5px solid;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s;
+}
+.n-chip:hover { opacity: .75; }
+.n-rm { font-size: 10px; font-weight: 400; opacity: .55; cursor: pointer; }
+.n-rm:hover { opacity: 1; }
+.n-a { color: #2A6B3C; border-color: #8FCDA7; background: #E8F5EE; }
+.n-m { color: #1B5EA8; border-color: #A8C5ED; background: #EAF1FB; }
+.n-b { color: #9B2020; border-color: #F0A8A8; background: #FDEAEA; }
+
+input[type=number] {
+  border: 1px solid var(--border2); border-radius: var(--r); padding: 5px 8px;
+  font-size: 12px; font-family: var(--font); background: var(--surface);
+  color: var(--text1); width: 72px;
+}
+input[type=number]:focus { outline: 2px solid var(--blue-b); outline-offset: 0; }
+
+/* RIGHT PANE — OUTPUT */
+.output-window {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rlg);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.output-titlebar {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-red    { background: #F0A8A8; }
+.dot-amber  { background: #F0C878; }
+.dot-green  { background: #8FCDA7; }
+.output-titlebar-label { font-size: 12px; color: var(--text2); margin-left: 4px; font-weight: 500; }
+.output-body { padding: 16px 18px; min-height: 120px; }
+
+/* DIFF PANEL */
+.diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.diff-cell { border: 1px solid var(--border); border-radius: var(--r); }
+.diff-head { font-size: 10px; font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border); letter-spacing: .06em; text-transform: uppercase; color: var(--text3); background: var(--surface2); }
+.diff-body { padding: 10px 12px; min-height: 50px; font-size: 13px; line-height: 1.8; }
+
+/* ALERT BOXES */
+.alert { padding: 8px 12px; border-radius: var(--r); font-size: 12px; border: 1px solid; margin-top: 8px; }
+.a-green { background: var(--green-bg); color: var(--green); border-color: var(--green-b); }
+.a-amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-b); }
+.a-blue  { background: var(--blue-bg);  color: var(--blue);  border-color: var(--blue-b); }
+.a-red   { background: var(--red-bg);   color: var(--red);   border-color: var(--red-b); }
+
+/* HISTORY */
+.hist-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 0; border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text2);
+}
+.hist-item:last-child { border-bottom: none; }
+
+/* PROGRESS */
+.prog-wrap { padding: 0 14px 8px; }
+.prog-track { height: 3px; background: var(--border); border-radius: 2px; }
+.prog-fill  { height: 100%; border-radius: 2px; background: var(--blue); transition: width .5s; }
+
+/* SCORE GRID */
+.sc-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.sc-cell { background: var(--surface2); border-radius: var(--r); padding: 8px; text-align: center; border: 1px solid var(--border); }
+.sc-num  { font-size: 20px; font-weight: 700; color: var(--text1); }
+.sc-lbl  { font-size: 10px; color: var(--text2); margin-top: 1px; }
+
+/* SLIDE */
+.slide-card {
+  background: #F8F7F3;
+  border: 1.5px solid var(--blue-b);
+  border-radius: var(--rlg);
+  padding: 16px 18px;
+  margin-top: 8px;
+}
+
+textarea {
+  width: 100%; border: 1px solid var(--border2); border-radius: var(--r);
+  padding: 7px 10px; font-size: 12px; font-family: var(--font);
+  background: var(--surface); color: var(--text1); resize: vertical;
+  line-height: 1.5; min-height: 50px;
+}
+textarea:focus { outline: 2px solid var(--blue-b); outline-offset: 0; }
+
+/* SECTION TABS inside right pane */
+.rtabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+.rtab {
+  cursor: pointer; padding: 5px 12px; border-radius: var(--r);
+  border: 1px solid var(--border); font-size: 12px; font-weight: 500;
+  background: var(--surface2); color: var(--text2); font-family: var(--font);
+  transition: all .15s;
+}
+.rtab:hover { background: var(--border); }
+.rtab.active { background: var(--blue-bg); border-color: var(--blue-b); color: var(--blue); }
+
+.rscreen { display: none; }
+.rscreen.active { display: block; }
+
+/* APRES TAG */
+.apres-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; margin: 2px;
+}
+
+/* DIVIDER */
+.divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+/* RUN FLASH */
+@keyframes flash {
+  0%   { background: rgba(100,220,120,.18); }
+  100% { background: transparent; }
+}
+.run-flash { animation: flash .6s ease; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div>
+    <div class="topbar-title">&#128187; Simulador — Refinando e Apresentando &nbsp;<span style="font-weight:400;color:var(--text2)">· Habilidade · EF07CO03</span></div>
+  </div>
+  <div class="badges">
+    <span class="badge b-blue"  id="badge-ver">Versão 0</span>
+    <span class="badge b-gray"  id="badge-ref">0 refinamentos</span>
+    <div class="prog-wrap" style="padding:0;width:160px;">
+      <div class="prog-track" style="height:4px"><div class="prog-fill" id="global-prog" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SPLIT -->
+<div class="split">
+
+  <!-- ═══════════════════════ LEFT PANE ═══════════════════════ -->
+  <div class="pane pane-left">
+    <div class="pane-header">
+      <span class="pane-title">&#128196; Editor de código</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-green" onclick="runProgram()" id="run-btn">&#9654; Executar</button>
+        <button class="btn" onclick="resetAll()" title="Reiniciar">&#8635;</button>
+      </div>
+    </div>
+
+    <div class="pane-scroll">
+
+      <!-- CODE BLOCK -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--editor-bg2);border-bottom:1px solid #2A2B3C">
+          <span style="font-size:11px;color:#555880;font-family:var(--mono)">media_turma.pseudo &nbsp;—&nbsp; versão <span id="ver-lbl" style="color:#82AAFF">0</span></span>
+          <span style="font-size:10px;color:#3D3F58">pseudocódigo</span>
+        </div>
+        <div class="editor" id="code-editor"></div>
+      </div>
+
+      <!-- NOTAS -->
+      <div class="card">
+        <div class="card-title" style="font-size:13px">Notas da turma</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Clique em uma nota para editar · × para remover</div>
+        <div class="notas-wrap" id="notas-chips"></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <input type="number" id="nova-nota" min="0" max="10" step="0.5" placeholder="0–10">
+          <button class="btn btn-blue" onclick="addNota()">+ Nota</button>
+          <button class="btn" onclick="resetNotas()" style="font-size:11px">Restaurar</button>
+        </div>
+      </div>
+
+      <!-- REFINAMENTO TOOLS -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="card-title" style="font-size:13px">Ferramentas de refinamento</div>
+          <span class="badge b-gray" style="font-size:10px">aplica ao vivo</span>
+        </div>
+
+        <!-- VISUAL -->
+        <div class="tool-section">
+          <div class="lbl" style="display:flex;align-items:center;gap:5px">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block"></span>
+            Visual — título e layout
+          </div>
+          <div class="tool-row">
+            <button class="tog" id="tg-title" onclick="togVisual('title')">Título de seção</button>
+            <button class="tog" id="tg-sep"   onclick="togVisual('sep')">Separador</button>
+            <button class="tog" id="tg-box"   onclick="togVisual('box')">Fundo colorido</button>
+          </div>
+          <div class="lbl" style="margin-top:6px">Cor de destaque</div>
+          <div class="pal" id="pal-cores"></div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- MENSAGENS -->
+        <div class="tool-section">
+          <div class="lbl" style="display:flex;align-items:center;gap:5px">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);display:inline-block"></span>
+            Mensagens — alertas coloridos
+          </div>
+          <div class="tool-row">
+            <button class="tog" id="tg-ms" onclick="togMsg('simples')">Simples</button>
+            <button class="tog" id="tg-mc" onclick="togMsg('colorido')">Colorido</button>
+            <button class="tog" id="tg-mo" onclick="togMsg('off')" style="class:tog on-amber">Nenhuma</button>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.5">
+            Simples: aprovado/reprovado · Colorido: verde/azul/vermelho por faixa
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- LÓGICA -->
+        <div class="tool-section">
+          <div class="lbl" style="display:flex;align-items:center;gap:5px">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>
+            Lógica — cálculos adicionais
+          </div>
+          <div class="tool-row">
+            <button class="tog" id="tg-maior" onclick="togLogic('maior')">Maior nota</button>
+            <button class="tog" id="tg-menor" onclick="togLogic('menor')">Menor nota</button>
+            <button class="tog" id="tg-aprov" onclick="togLogic('aprov')">Aprovados</button>
+            <button class="tog" id="tg-perc"  onclick="togLogic('perc')">Percentual</button>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- FONTE -->
+        <div class="tool-section">
+          <div class="lbl" style="display:flex;align-items:center;gap:5px">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--purple);display:inline-block"></span>
+            Tipografia — fonte e tamanho
+          </div>
+          <div class="tool-row" id="font-btns"></div>
+          <div class="font-size-ctrl" style="margin-top:6px">
+            <span style="font-size:11px;color:var(--text3)">Tamanho:</span>
+            <button class="sz-btn" onclick="changeSize(-1)">−</button>
+            <span class="sz-val" id="sz-val">14</span>
+            <button class="sz-btn" onclick="changeSize(1)">+</button>
+            <span style="font-size:11px;color:var(--text3)">px</span>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <button class="btn btn-green" style="width:100%" onclick="applyAndRun()">&#10003; Aplicar refinamento e executar</button>
+          <div id="apply-fb" style="display:none"></div>
+        </div>
+      </div>
+
+    </div><!-- end pane-scroll -->
+  </div><!-- end pane-left -->
+
+  <!-- ═══════════════════════ RIGHT PANE ══════════════════════ -->
+  <div class="pane pane-right">
+    <div class="pane-header">
+      <span class="pane-title">&#9654; Saída do programa</span>
+      <div class="rtabs">
+        <button class="rtab active" id="rt-output"  onclick="switchRight('output')">Resultado</button>
+        <button class="rtab"        id="rt-diff"    onclick="switchRight('diff')">Antes × Depois</button>
+      </div>
+    </div>
+
+    <div class="pane-scroll">
+
+      <!-- OUTPUT -->
+      <div class="rscreen active" id="rs-output">
+        <div class="output-window">
+          <div class="output-titlebar">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-amber"></div>
+            <div class="dot dot-green"></div>
+            <span class="output-titlebar-label">programa_media_turma — saída</span>
+          </div>
+          <div class="output-body" id="output-main">
+            <span style="color:var(--text3);font-size:13px">Clique em <strong style="font-weight:600">Executar</strong> para ver o resultado aqui.</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="lbl">Estatísticas da execução</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px" id="exec-stats">
+            <div class="sc-cell"><div class="sc-num" id="stat-alunos">10</div><div class="sc-lbl">Alunos</div></div>
+            <div class="sc-cell"><div class="sc-num" id="stat-media">—</div><div class="sc-lbl">Média</div></div>
+            <div class="sc-cell"><div class="sc-num" id="stat-aprov">—</div><div class="sc-lbl">Aprovados</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIFF -->
+      <div class="rscreen" id="rs-diff">
+        <div class="card">
+          <div class="card-title">Antes × Depois do refinamento</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Compare a saída original com a versão atual refinada.</div>
+          <div class="diff-grid">
+            <div class="diff-cell">
+              <div class="diff-head">Versão original</div>
+              <div class="diff-body" id="diff-orig"><span style="color:var(--text3)">Execute primeiro.</span></div>
+            </div>
+            <div class="diff-cell">
+              <div class="diff-head" style="background:var(--green-bg);color:var(--green);border-color:var(--green-b)">Versão atual</div>
+              <div class="diff-body" id="diff-curr"><span style="color:var(--text3)">Execute primeiro.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end right pane-scroll -->
+  </div><!-- end pane-right -->
+
+</div><!-- end split -->
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+var S = {
+  notas: [6,7,8,5,9,4,7,10,6,8],
+  version: 0, refineCount: 0,
+  applied: { visual:0, msg:0, logic:0, font:0 },
+  history: [],
+  // visual
+  showTitle:false, showSep:false, showBox:false,
+  corH:'#1B5EA8', corF:'#EAF1FB',
+  // msg
+  msgMode:'off',
+  // logic
+  showMaior:false, showMenor:false, showAprov:false, showPerc:false,
+  // font
+  fontFamily:'DM Sans', fontSize:14,
+  // apres
+  aTagV:false, aTagM:false, aTagL:false, aTagT:false,
+  // diff
+  originalOutput:''
+};
+
+var CORES = [
+  {h:'#1B5EA8',f:'#EAF1FB',n:'Azul'},
+  {h:'#2A6B3C',f:'#E8F5EE',n:'Verde'},
+  {h:'#7A4B0A',f:'#FDF2DC',n:'Âmbar'},
+  {h:'#9B2020',f:'#FDEAEA',n:'Vermelho'},
+  {h:'#4A2A8A',f:'#EEE8FA',n:'Roxo'},
+  {h:'#1A5C5C',f:'#E0F4F4',n:'Teal'},
+];
+
+var FONTS = [
+  {id:'DM Sans',  label:'Sans'},
+  {id:'Georgia',  label:'Serif'},
+  {id:'DM Mono',  label:'Mono'},
+  {id:'Impact',   label:'Bold'},
+];
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+function init() {
+  renderPalette();
+  renderFontBtns();
+  renderNotas();
+  renderCode();
+  setMsgToggle();
+}
+
+/* ═══════════════════════════════════════════════════════
+   RIGHT PANEL TABS
+═══════════════════════════════════════════════════════ */
+function switchRight(t) {
+  ['output','diff'].forEach(function(x) {
+    document.getElementById('rs-'+x).classList.remove('active');
+    document.getElementById('rt-'+x).classList.remove('active');
+  });
+  document.getElementById('rs-'+t).classList.add('active');
+  document.getElementById('rt-'+t).classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════════
+   CALC HELPERS
+═══════════════════════════════════════════════════════ */
+function calcMedia() { return S.notas.length ? S.notas.reduce(function(a,b){return a+b},0)/S.notas.length : 0; }
+function calcMaior() { return Math.max.apply(null,S.notas); }
+function calcMenor() { return Math.min.apply(null,S.notas); }
+function calcAprov() { return S.notas.filter(function(n){return n>=6}).length; }
+
+/* ═══════════════════════════════════════════════════════
+   CODE RENDER
+═══════════════════════════════════════════════════════ */
+function renderCode() {
+  var lines = [
+    {n:1, t:'<span class="cm"># Programa: calculadora de médias da turma</span>'},
+    {n:2, t:'<span class="kw">notas</span> ← [' + S.notas.join(', ') + ']'},
+    {n:3, t:''},
+    {n:4, t:'<span class="kw">soma</span> ← 0'},
+    {n:5, t:'<span class="kw">PARA CADA</span> nota <span class="kw">EM</span> notas:'},
+    {n:6, t:'&nbsp;&nbsp;&nbsp;&nbsp;soma ← soma + nota'},
+    {n:7, t:'<span class="kw">media</span> ← soma ÷ <span class="fn">quantidade</span>(notas)'},
+    {n:8, t:''},
+  ];
+  var ln = 9;
+  if(S.showTitle) lines.push({n:ln++,t:'<span class="fn">EXIBIR</span> <span class="str hl-v">"=== Resultado da Turma ==="</span><span class="ctag ct-v">visual</span>', isNew:true});
+  if(S.showSep)   lines.push({n:ln++,t:'<span class="fn">EXIBIR</span> <span class="str hl-v">"——————————————————"</span><span class="ctag ct-v">visual</span>', isNew:true});
+  lines.push({n:ln++, t:'<span class="fn">EXIBIR</span> <span class="str">"Média da turma:"</span>, media'});
+  if(S.showMaior) { lines.push({n:ln++,t:'<span class="kw">maior</span> ← <span class="fn">maximo</span>(notas)<span class="ctag ct-l">lógica</span>',isNew:true}); lines.push({n:ln++,t:'<span class="fn">EXIBIR</span> <span class="str hl-l">"Maior nota:"</span>, maior<span class="ctag ct-l">lógica</span>',isNew:true}); }
+  if(S.showMenor) { lines.push({n:ln++,t:'<span class="kw">menor</span> ← <span class="fn">minimo</span>(notas)<span class="ctag ct-l">lógica</span>',isNew:true}); lines.push({n:ln++,t:'<span class="fn">EXIBIR</span> <span class="str hl-l">"Menor nota:"</span>, menor<span class="ctag ct-l">lógica</span>',isNew:true}); }
+  if(S.showAprov) { lines.push({n:ln++,t:'<span class="kw">aprovados</span> ← <span class="fn">contar</span>(nota ≥ 6)<span class="ctag ct-l">lógica</span>',isNew:true}); lines.push({n:ln++,t:'<span class="fn">EXIBIR</span> <span class="str hl-l">"Aprovados:"</span>, aprovados<span class="ctag ct-l">lógica</span>',isNew:true}); }
+  if(S.showPerc)  { lines.push({n:ln++,t:'<span class="kw">perc</span> ← (aprovados ÷ <span class="fn">quantidade</span>(notas)) × 100<span class="ctag ct-l">lógica</span>',isNew:true}); lines.push({n:ln++,t:'<span class="fn">EXIBIR</span> <span class="str hl-l">"Percentual:"</span>, perc, <span class="str">"%"</span><span class="ctag ct-l">lógica</span>',isNew:true}); }
+  if(S.msgMode==='simples') lines.push({n:ln++,t:'<span class="kw">SE</span> media ≥ 6: <span class="fn">EXIBIR</span> <span class="str hl-m">"Aprovado"</span> <span class="kw">SENÃO</span> <span class="fn">EXIBIR</span> <span class="str hl-m">"Reprovado"</span><span class="ctag ct-m">mensagem</span>',isNew:true});
+  else if(S.msgMode==='colorido') {
+    lines.push({n:ln++,t:'<span class="kw">SE</span> media ≥ 8: <span class="fn">ALERTA_VERDE</span>(<span class="str hl-m">"Turma excelente!"</span>)<span class="ctag ct-m">mensagem</span>',isNew:true});
+    lines.push({n:ln++,t:'<span class="kw">SENÃO SE</span> media ≥ 6: <span class="fn">ALERTA_AZUL</span>(<span class="str hl-m">"Turma aprovada."</span>)<span class="ctag ct-m">mensagem</span>',isNew:true});
+    lines.push({n:ln++,t:'<span class="kw">SENÃO</span>: <span class="fn">ALERTA_VERMELHO</span>(<span class="str hl-m">"Atenção: reprovada!"</span>)<span class="ctag ct-m">mensagem</span>',isNew:true});
+  }
+  var html = lines.map(function(l){
+    return '<div class="code-row'+(l.isNew?' new-line':'')+'"><span class="ln">'+(l.n||'')+'</span><span class="code-txt">'+l.t+'</span></div>';
+  }).join('');
+  document.getElementById('code-editor').innerHTML = html;
+  document.getElementById('ver-lbl').textContent = S.version;
+}
+
+/* ═══════════════════════════════════════════════════════
+   OUTPUT BUILD
+═══════════════════════════════════════════════════════ */
+function buildOutput(forDiff) {
+  if(!S.notas.length) return '<span style="color:#9B2020">Erro: lista de notas vazia!</span>';
+  var m = calcMedia();
+  var ff = forDiff ? 'DM Sans' : S.fontFamily;
+  var fs = forDiff ? 14 : S.fontSize;
+  var html = '<div style="font-family:'+ff+',system-ui,sans-serif;font-size:'+fs+'px">';
+  if(S.showTitle) {
+    html += '<div style="font-weight:700;color:'+S.corH+';background:'+S.corF+';padding:8px 13px;border-radius:7px;margin-bottom:10px;border:1px solid '+S.corH+'44">Resultado da Turma</div>';
+  }
+  if(S.showSep) html += '<hr style="border:none;border-top:1.5px dashed '+S.corH+'66;margin:6px 0 10px">';
+  var mainStyle = S.showBox ? 'background:'+S.corF+';padding:8px 12px;border-radius:6px;border:1px solid '+S.corH+'33;' : '';
+  html += '<div style="'+mainStyle+'margin-bottom:6px">';
+  html += '<div style="margin-bottom:3px">Média da turma: <strong style="font-weight:700;color:'+S.corH+'">'+m.toFixed(2)+'</strong></div>';
+  if(S.showMaior) html += '<div style="color:#2A6B3C">Maior nota: <strong style="font-weight:700">'+calcMaior().toFixed(1)+'</strong></div>';
+  if(S.showMenor) html += '<div style="color:#9B2020">Menor nota: <strong style="font-weight:700">'+calcMenor().toFixed(1)+'</strong></div>';
+  if(S.showAprov) { var a=calcAprov(); html += '<div style="color:#1B5EA8">Aprovados: <strong style="font-weight:700">'+a+' de '+S.notas.length+'</strong></div>'; }
+  if(S.showPerc)  { var p=Math.round((calcAprov()/S.notas.length)*100); html += '<div style="color:#1B5EA8">Percentual aprovados: <strong style="font-weight:700">'+p+'%</strong></div>'; }
+  html += '</div>';
+  if(S.msgMode==='simples') {
+    if(m>=6) html += '<div style="margin-top:8px;background:#E8F5EE;color:#2A6B3C;padding:8px 13px;border-radius:7px;font-weight:700;border:1px solid #8FCDA7">&#10003; Aprovado</div>';
+    else     html += '<div style="margin-top:8px;background:#FDEAEA;color:#9B2020;padding:8px 13px;border-radius:7px;font-weight:700;border:1px solid #F0A8A8">&#10007; Reprovado</div>';
+  } else if(S.msgMode==='colorido') {
+    if(m>=8)      html += '<div style="margin-top:8px;background:#E8F5EE;color:#2A6B3C;padding:8px 13px;border-radius:7px;font-weight:700;border:1px solid #8FCDA7">&#11088; Turma excelente!</div>';
+    else if(m>=6) html += '<div style="margin-top:8px;background:#EAF1FB;color:#1B5EA8;padding:8px 13px;border-radius:7px;font-weight:700;border:1px solid #A8C5ED">&#10003; Turma aprovada.</div>';
+    else          html += '<div style="margin-top:8px;background:#FDEAEA;color:#9B2020;padding:8px 13px;border-radius:7px;font-weight:700;border:1px solid #F0A8A8">&#9888; Atenção: turma reprovada!</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function buildOriginalOutput() {
+  var m = S.notas.length ? calcMedia() : 0;
+  return '<div style="font-size:14px">Média da turma: <strong style="font-weight:700">'+m.toFixed(2)+'</strong></div>';
+}
+
+/* ═══════════════════════════════════════════════════════
+   RUN
+═══════════════════════════════════════════════════════ */
+function runProgram() {
+  var html = buildOutput(false);
+  var el = document.getElementById('output-main');
+  el.innerHTML = html;
+  el.classList.remove('run-flash');
+  void el.offsetWidth;
+  el.classList.add('run-flash');
+  document.getElementById('diff-curr').innerHTML = buildOutput(true);
+  if(!S.originalOutput) {
+    S.originalOutput = buildOriginalOutput();
+    document.getElementById('diff-orig').innerHTML = S.originalOutput;
+  }
+  var m = calcMedia();
+  document.getElementById('stat-alunos').textContent = S.notas.length;
+  document.getElementById('stat-media').textContent = m.toFixed(2);
+  document.getElementById('stat-aprov').textContent = calcAprov();
+  switchRight('output');
+}
+
+/* ═══════════════════════════════════════════════════════
+   APPLY + RUN
+═══════════════════════════════════════════════════════ */
+function applyAndRun() {
+  S.version++;
+  S.refineCount++;
+  var types = [];
+  if(S.showTitle||S.showSep||S.showBox) { S.applied.visual++; types.push('visual'); }
+  if(S.msgMode!=='off') { S.applied.msg++; types.push('mensagens'); }
+  if(S.showMaior||S.showMenor||S.showAprov||S.showPerc) { S.applied.logic++; types.push('lógica'); }
+  if(S.fontFamily!=='DM Sans'||S.fontSize!==14) { S.applied.font++; types.push('tipografia'); }
+  var desc = types.length ? types.join(', ') : 'configuração';
+  S.history.push({desc:'v'+S.version+' — '+desc, ts:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+  renderCode();
+  runProgram();
+  updateTopbar();
+  updateScores();
+  var fb = document.getElementById('apply-fb');
+  fb.style.display = 'block';
+  fb.className = 'alert a-green';
+  fb.innerHTML = '&#10003; Versão <strong style="font-weight:700">'+S.version+'</strong> aplicada! Veja o resultado à direita.';
+}
+
+/* ═══════════════════════════════════════════════════════
+   TOOL TOGGLES
+═══════════════════════════════════════════════════════ */
+function togVisual(k) {
+  if(k==='title') { S.showTitle=!S.showTitle; setTog('tg-title',S.showTitle,'on-blue'); }
+  else if(k==='sep') { S.showSep=!S.showSep; setTog('tg-sep',S.showSep,'on-blue'); }
+  else if(k==='box') { S.showBox=!S.showBox; setTog('tg-box',S.showBox,'on-blue'); }
+  renderCode();
+}
+
+function togMsg(m) {
+  S.msgMode = (S.msgMode===m) ? 'off' : m;
+  setMsgToggle();
+  renderCode();
+}
+function setMsgToggle() {
+  document.getElementById('tg-ms').className = 'tog'+(S.msgMode==='simples'?' on-amber':'');
+  document.getElementById('tg-mc').className = 'tog'+(S.msgMode==='colorido'?' on-amber':'');
+  document.getElementById('tg-mo').className = 'tog'+(S.msgMode==='off'?' on-amber':'');
+}
+
+function togLogic(k) {
+  var map = {maior:'showMaior',menor:'showMenor',aprov:'showAprov',perc:'showPerc'};
+  S[map[k]] = !S[map[k]];
+  setTog('tg-'+k, S[map[k]], 'on-green');
+  renderCode();
+}
+
+function setTog(id, state, cls) {
+  var el = document.getElementById(id);
+  el.className = 'tog' + (state ? ' '+cls : '');
+}
+
+/* ═══════════════════════════════════════════════════════
+   PALETTE
+═══════════════════════════════════════════════════════ */
+function renderPalette() {
+  var html = CORES.map(function(c) {
+    var sel = S.corH===c.h ? ' sel' : '';
+    return '<div class="cor'+sel+'" style="background:'+c.h+'" title="'+c.n+'" onclick="setCor(\''+c.h+'\',\''+c.f+'\')"></div>';
+  }).join('');
+  document.getElementById('pal-cores').innerHTML = html;
+}
+function setCor(h,f) {
+  S.corH=h; S.corF=f;
+  renderPalette();
+  renderCode();
+}
+
+/* ═══════════════════════════════════════════════════════
+   FONTS
+═══════════════════════════════════════════════════════ */
+function renderFontBtns() {
+  var html = FONTS.map(function(f) {
+    var sel = S.fontFamily===f.id ? ' sel' : '';
+    return '<button class="font-btn'+sel+'" style="font-family:\''+f.id+'\',serif" onclick="setFont(\''+f.id+'\')">'+f.label+'</button>';
+  }).join('');
+  document.getElementById('font-btns').innerHTML = html;
+}
+function setFont(f) {
+  S.fontFamily = f;
+  renderFontBtns();
+}
+function changeSize(d) {
+  S.fontSize = Math.max(11, Math.min(22, S.fontSize+d));
+  document.getElementById('sz-val').textContent = S.fontSize;
+}
+
+/* ═══════════════════════════════════════════════════════
+   NOTAS
+═══════════════════════════════════════════════════════ */
+function renderNotas() {
+  var html = S.notas.map(function(n,i) {
+    var cls = n>=8?'n-a':n>=6?'n-m':'n-b';
+    return '<span class="n-chip '+cls+'" onclick="editNota('+i+')" title="Editar">'+n.toFixed(1)+'<span class="n-rm" onclick="removeNota(event,'+i+')">&times;</span></span>';
+  }).join('');
+  document.getElementById('notas-chips').innerHTML = html || '<span style="color:var(--text3);font-size:12px">Adicione notas abaixo.</span>';
+}
+function addNota() {
+  var v=parseFloat(document.getElementById('nova-nota').value);
+  if(isNaN(v)||v<0||v>10) return;
+  S.notas.push(parseFloat(v.toFixed(1)));
+  document.getElementById('nova-nota').value='';
+  renderNotas(); renderCode();
+}
+function editNota(i) {
+  var v=prompt('Editar nota (0–10):',S.notas[i]);
+  if(!v) return;
+  var n=parseFloat(v);
+  if(!isNaN(n)&&n>=0&&n<=10) { S.notas[i]=parseFloat(n.toFixed(1)); renderNotas(); renderCode(); }
+}
+function removeNota(e,i) {
+  e.stopPropagation();
+  S.notas.splice(i,1);
+  renderNotas(); renderCode();
+}
+function resetNotas() { S.notas=[6,7,8,5,9,4,7,10,6,8]; renderNotas(); renderCode(); }
+
+/* ═══════════════════════════════════════════════════════
+   TOPBAR + SCORES
+═══════════════════════════════════════════════════════ */
+function updateTopbar() {
+  document.getElementById('badge-ver').textContent = 'Versão '+S.version;
+  document.getElementById('badge-ref').textContent = S.refineCount+' refinamento'+(S.refineCount!==1?'s':'');
+  document.getElementById('global-prog').style.width = Math.min(100,S.refineCount*20)+'%';
+}
+function updateScores() {}
+
+/* ═══════════════════════════════════════════════════════
+   HISTORY (interno apenas)
+═══════════════════════════════════════════════════════ */
+function renderHistory() {}
+
+/* ═══════════════════════════════════════════════════════
+   APRESENTAÇÃO (removida da UI, stub mantido)
+═══════════════════════════════════════════════════════ */
+function togApres() {}
+function gerarSlide() {}
+
+/* ═══════════════════════════════════════════════════════
+   RESET
+═══════════════════════════════════════════════════════ */
+function resetAll() {
+  if(!confirm('Reiniciar? Todo o progresso será perdido.')) return;
+  S={notas:[6,7,8,5,9,4,7,10,6,8],version:0,refineCount:0,applied:{visual:0,msg:0,logic:0,font:0},history:[],showTitle:false,showSep:false,showBox:false,corH:'#1B5EA8',corF:'#EAF1FB',msgMode:'off',showMaior:false,showMenor:false,showAprov:false,showPerc:false,fontFamily:'DM Sans',fontSize:14,originalOutput:''};
+  ['tg-title','tg-sep','tg-box','tg-maior','tg-menor','tg-aprov','tg-perc'].forEach(function(id){document.getElementById(id).className='tog';});
+  document.getElementById('sz-val').textContent='14';
+  document.getElementById('apply-fb').style.display='none';
+  document.getElementById('output-main').innerHTML='<span style="color:var(--text3);font-size:13px">Clique em <strong style="font-weight:600">Executar</strong> para ver o resultado aqui.</span>';
+  document.getElementById('diff-orig').innerHTML='<span style="color:var(--text3)">Execute primeiro.</span>';
+  document.getElementById('diff-curr').innerHTML='<span style="color:var(--text3)">Execute primeiro.</span>';
+  setMsgToggle(); renderPalette(); renderFontBtns();
+  renderNotas(); renderCode(); updateTopbar(); updateScores();
+  switchRight('output');
+}
+
+init();
+</script>
+</body>
+</html>
